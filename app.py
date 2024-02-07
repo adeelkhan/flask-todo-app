@@ -1,7 +1,13 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 import uuid 
+
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 app = Flask(__name__)
+
+
+app.config['JWT_SECRET_KEY'] = 'super-secret'
+jwt = JWTManager(app)
 
 
 # model
@@ -51,10 +57,12 @@ def Signin():
   request_json = request.get_json()
   user, error = get_user_profile(request_json)
   if user:
+    access_token = create_access_token(identity=user.username)
     return {
       "Msg": "Success",
       "Status": 200,
       "User": user.username,
+      "access_token": access_token
     }
   else:
     return {
@@ -68,6 +76,7 @@ def Refresh():
   pass 
 
 @app.route('/create', methods=["POST"])
+@jwt_required()
 def Create():
   request_json = request.get_json()
   item_name = request_json['item_name']
@@ -82,6 +91,7 @@ def Create():
   }
 
 @app.route('/update', methods=["POST"])
+@jwt_required()
 def Update():
   request_json = request.get_json()
   item_id = request_json['item_id']
@@ -102,6 +112,7 @@ def Update():
   } 
 
 @app.route('/delete', methods=["POST"])
+@jwt_required()
 def Delete():
   user_profile = users['user1@abc.com']
   todo_list = user_profile.todoItem
@@ -118,6 +129,7 @@ def Delete():
   }
 
 @app.route('/list', methods=["GET"])
+@jwt_required()
 def List():
   user_profile = users['user1@abc.com']
   todo_list = user_profile.todoItem
