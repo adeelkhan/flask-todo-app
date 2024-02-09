@@ -2,10 +2,8 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 import uuid 
 
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, current_user
 app = Flask(__name__)
-
-
 app.config['JWT_SECRET_KEY'] = 'super-secret'
 jwt = JWTManager(app)
 
@@ -83,7 +81,7 @@ def Create():
   uu_id = uuid.uuid4().hex
   create_time = datetime.now().ctime()
   todoMap[uu_id] = TodoItem(uu_id, item_name, create_time, create_time)
-  users['user1@abc.com'].todoItem[uu_id]=uu_id
+  users[current_user].todoItem[uu_id]=uu_id
 
   return {
       "Msg": "Success",
@@ -114,13 +112,13 @@ def Update():
 @app.route('/delete', methods=["POST"])
 @jwt_required()
 def Delete():
-  user_profile = users['user1@abc.com']
-  todo_list = user_profile.todoItem
+  user_profile = users[current_user]
+  todo_user_map = user_profile.todoItem
 
   request_json = request.get_json()
 
   item_id = request_json['item_id']
-  todo_list.remove(item_id)
+  todo_user_map.pop(item_id, None)
   todoMap.pop(item_id, None)
 
   return {
@@ -128,10 +126,16 @@ def Delete():
     "Status": 200,
   }
 
+
+@jwt.user_lookup_loader
+def user_lookup_callback(jwt_header, jwt_data):
+  identity = jwt_data["sub"]
+  return identity
+
 @app.route('/list', methods=["GET"])
 @jwt_required()
 def List():
-  user_profile = users['user1@abc.com']
+  user_profile = users[current_user]
   todo_list = user_profile.todoItem
   items = []
   for id in todo_list:
